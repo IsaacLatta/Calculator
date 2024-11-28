@@ -103,10 +103,7 @@ begin
     
     led <= STD_LOGIC_VECTOR(state);
     input_debug <= Debounced_Decode;
-    opcode <= "0000";  -- Always addition
-
-   
-
+    --opcode <= "0000";  -- Always addition
 main_process: process(clk)
 begin
     if rising_edge(clk) then
@@ -119,25 +116,31 @@ begin
                     state <= to_unsigned(1, 4);
                 end if;
                 
-            when to_unsigned(1, 4) =>  -- Wait for second operand
-                if Input_Changed = '1' and Debounced_Decode /= "0000" then
-                    operand_b <= Debounced_Decode;
-                    compute <= '1';  -- Start computation
+            when to_unsigned(1, 4) =>  -- Wait for opcode
+                compute <= '0';
+                if Input_Changed = '1' and Decounced_Decode Debounced_Decode /= "0000" then
+                    opcode <= Debounced_Decode;
                     state <= to_unsigned(2, 4);
                 end if;
                 
-            when to_unsigned(2, 4) =>  -- Computation state
-                if completed = '1' and completed_last = '0' then  -- Detect rising edge
-                    compute <= '0';  -- Deassert compute after computation
+            when to_unsigned(2, 4) =>  -- Wait for second operand
+                if Input_Changed = '1' and Debounced_Decode /= "0000" then
+                    operand_b <= Debounced_Decode;
+                    compute <= '1';  -- Start computation
                     state <= to_unsigned(3, 4);
                 end if;
                 
-            when to_unsigned(3, 4) =>  -- Display result state
+            when to_unsigned(3, 4) =>  -- Computation state
+                if completed = '1' and completed_last = '0' then  -- Detect rising edge
+                    compute <= '0';  -- Deassert compute after computation
+                    state <= to_unsigned(4, 4);
+                end if;
+                
+            when to_unsigned(4, 4) =>  -- Display result state
                 -- Result is displayed; wait for user to reset
                 if Input_Changed = '1' then
                     operand_a <= (others => '0');
                     operand_b <= (others => '0');
-                    --result <= (others => '0');
                     state <= to_unsigned(0, 4);
                 end if;
                 
