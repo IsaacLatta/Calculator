@@ -18,7 +18,7 @@ end alu;
 -- ALU Module
 architecture Behavioral of alu is
     signal internal_done: STD_LOGIC := '0';
-    signal internal_result: STD_LOGIC_VECTOR (7 downto 0) := (others => '0');
+    signal internal_result: STD_LOGIC_VECTOR (31 downto 0) := (others => '0');
 begin
     done <= internal_done;
     result <= internal_result;
@@ -51,5 +51,6 @@ begin
         end if;
     end if;
 end process;
+end Behavioral;
 
 
