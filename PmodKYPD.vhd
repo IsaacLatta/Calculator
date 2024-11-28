@@ -40,22 +40,26 @@ component Decoder is
 	end component;
 
 component DisplayController is
-	Port (
-			  DispVal : in  STD_LOGIC_VECTOR (3 downto 0);
-           anode: out std_logic_vector(3 downto 0);
-           segOut : out  STD_LOGIC_VECTOR (6 downto 0));
-	end component;
+    Port ( 
+        clk : in STD_LOGIC;                       -- Clock signal
+        DispVal : in  STD_LOGIC_VECTOR (15 downto 0); -- 16-bit value to display
+        anode : out std_logic_vector(3 downto 0); -- Anode control for four digits
+        segOut : out  STD_LOGIC_VECTOR (6 downto 0)  -- Segment outputs
+    );
+end component;
+
 
 component alu is
-        Port ( 
-            clk : in STD_LOGIC;
-            done : out STD_LOGIC;
-            ready : inout STD_LOGIC; 
-            a : in  STD_LOGIC_VECTOR (3 downto 0);  -- Operand a
-               b : in  STD_LOGIC_VECTOR (3 downto 0);  -- Operand b
-               opcode : in  STD_LOGIC_VECTOR (3 downto 0);  -- Opcode for operation
-               result : out  STD_LOGIC_VECTOR (7 downto 0));  -- Result of operation
-    end component;
+    Port (
+        clk: in STD_LOGIC;
+        done: out STD_LOGIC;
+        ready: in STD_LOGIC;
+        a : in  STD_LOGIC_VECTOR (15 downto 0);  -- Operand a (16 bits)
+        b : in  STD_LOGIC_VECTOR (15 downto 0);  -- Operand b (16 bits)
+        opcode : in STD_LOGIC_VECTOR (3 downto 0);  -- Operation selector
+        result : out STD_LOGIC_VECTOR (31 downto 0)  -- Result (32 bits)
+    );
+end component;
 
 component Debounce is
     Port ( 
@@ -73,17 +77,26 @@ signal state: unsigned(3 downto 0) := to_unsigned(0, 4);
     signal Debounced_Decode: STD_LOGIC_VECTOR (3 downto 0) := "0000";
     signal Input_Changed: STD_LOGIC := '0';
 
-    signal operand_a: STD_LOGIC_VECTOR (3 downto 0) := "0000";
-    signal operand_b: STD_LOGIC_VECTOR (3 downto 0) := "0000";
+   
     signal opcode: STD_LOGIC_VECTOR (3 downto 0) := "0000";
-    signal result: STD_LOGIC_VECTOR (7 downto 0);
+    signal operand_a: STD_LOGIC_VECTOR (15 downto 0) := (others => '0');
+    signal operand_b: STD_LOGIC_VECTOR (15 downto 0) := (others => '0');
+    signal result: STD_LOGIC_VECTOR (31 downto 0);  -- For multiplication results
+    signal operand_a_ready: STD_LOGIC := '0';
+    signal operand_b_ready: STD_LOGIC := '0';
 
     signal compute: STD_LOGIC := '0';
     signal completed: STD_LOGIC := '0';
     signal completed_last: STD_LOGIC := '0';  -- To detect rising edge of 'completed'
 begin
     C0: Decoder port map (clk=>clk, Row =>JA(7 downto 4), Col=>JA(3 downto 0), DecodeOut=> Decode);
-    C1: DisplayController port map (DispVal=>result(3 downto 0), anode=>an, segOut=>seg);
+    C1: DisplayController port map (
+    clk => clk,
+    DispVal => result(15 downto 0),  -- Adjust based on result size
+    anode => an,
+    segOut => seg
+    );
+
     C2: alu port map (
     clk => clk,  -- Pass the clock signal
     done => completed,
@@ -104,43 +117,76 @@ begin
     led <= STD_LOGIC_VECTOR(state);
     input_debug <= Debounced_Decode;
     --opcode <= "0000";  -- Always addition
+-- Modify main_process
 main_process: process(clk)
+    variable digit_value: unsigned(3 downto 0);
 begin
     if rising_edge(clk) then
         completed_last <= completed;  -- Update the previous 'completed' state
         case state is 
-            when to_unsigned(0, 4) =>  -- Wait for first operand
+            when to_unsigned(0, 4) =>  -- Wait for first digit of operand A
                 compute <= '0';
+                operand_a <= (others => '0');
+                operand_a_ready <= '0';
                 if Input_Changed = '1' and Debounced_Decode /= "0000" then
-                    operand_a <= Debounced_Decode;
+                    digit_value := unsigned(Debounced_Decode);
+                    operand_a <= std_logic_vector(resize(unsigned(operand_a) * 10 + unsigned(digit_value), 16));
                     state <= to_unsigned(1, 4);
                 end if;
                 
-            when to_unsigned(1, 4) =>  -- Wait for opcode
-                compute <= '0';
-                if Input_Changed = '1' and Decounced_Decode Debounced_Decode /= "0000" then
-                    opcode <= Debounced_Decode;
-                    state <= to_unsigned(2, 4);
+              
+            when to_unsigned(1, 4) =>  -- Accumulate digits for operand A
+                if Input_Changed = '1' then
+                    if Debounced_Decode /= "1111" then  -- Assuming "1111" is 'Enter' or continue
+                        digit_value := unsigned(Debounced_Decode);
+                        operand_a <= std_logic_vector(resize(unsigned(operand_a) * 10 + unsigned(digit_value), 16));
+                    else
+                        operand_a_ready <= '1';
+                        state <= to_unsigned(2, 4);
+                    end if;
                 end if;
                 
-            when to_unsigned(2, 4) =>  -- Wait for second operand
-                if Input_Changed = '1' and Debounced_Decode /= "0000" then
-                    operand_b <= Debounced_Decode;
-                    compute <= '1';  -- Start computation
+            when to_unsigned(2, 4) =>  -- Wait for operator
+                if Input_Changed = '1' and Debounced_Decode >= "1010" and Debounced_Decode <= "1101" then
+                    opcode <= Debounced_Decode;
                     state <= to_unsigned(3, 4);
                 end if;
                 
-            when to_unsigned(3, 4) =>  -- Computation state
-                if completed = '1' and completed_last = '0' then  -- Detect rising edge
-                    compute <= '0';  -- Deassert compute after computation
+            when to_unsigned(3, 4) =>  -- Wait for first digit of operand B
+                operand_b <= (others => '0');
+                operand_b_ready <= '0';
+                if Input_Changed = '1' and Debounced_Decode /= "0000" then
+                    digit_value := unsigned(Debounced_Decode);
+                    operand_b <= std_logic_vector(resize(unsigned(operand_b) * 10 + unsigned(digit_value), 16));
                     state <= to_unsigned(4, 4);
                 end if;
                 
-            when to_unsigned(4, 4) =>  -- Display result state
+            when to_unsigned(4, 4) =>  -- Accumulate digits for operand B
+                if Input_Changed = '1' then
+                    if Debounced_Decode /= "1111" then  -- Assuming "1111" is 'Enter' or continue
+                        digit_value := unsigned(Debounced_Decode);
+                        operand_b <= std_logic_vector(resize(unsigned(operand_b) * 10 + unsigned(digit_value), 16));
+                    else
+                        operand_b_ready <= '1';
+                        compute <= '1';  -- Start computation
+                        state <= to_unsigned(5, 4);
+                    end if;
+                end if;
+                
+            when to_unsigned(5, 4) =>  -- Computation state
+                if completed = '1' and completed_last = '0' then  -- Detect rising edge
+                    compute <= '0';  -- Deassert compute after computation
+                    state <= to_unsigned(6, 4);
+                end if;
+                
+            when to_unsigned(6, 4) =>  -- Display result state
                 -- Result is displayed; wait for user to reset
                 if Input_Changed = '1' then
                     operand_a <= (others => '0');
                     operand_b <= (others => '0');
+                    opcode <= (others => '0');
+                    operand_a_ready <= '0';
+                    operand_b_ready <= '0';
                     state <= to_unsigned(0, 4);
                 end if;
                 
