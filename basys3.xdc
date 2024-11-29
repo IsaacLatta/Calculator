@@ -1,7 +1,23 @@
-## This file is a general .xdc for the Basys3 rev B board
-## To use it in a project:
-## - uncomment the lines corresponding to used pins
-## - rename the used ports (in each line, after get_ports) according to the top level signal names in the project
+## ------------------------------------------------------------------------------
+## File Name: Basys3_Master.xdc
+## Company: Digilent Inc
+## Original Author: Digilent Documentation Team, Isaac Latta (Modified), Michael Baudin (Modified)
+##
+## Description:
+## This file is a general constraint file (.xdc) for the Basys3 rev B board. 
+## The original file was sourced from the Digilent Basys3 documentation. It defines
+## pin assignments and properties for various board components such as switches, 
+## LEDs, seven-segment displays, and Pmod headers. 
+##
+## Modifications:
+## - Selected specific pins for use in the Calculator project.
+## - Added constraints for `input_debug` signals.
+## - Un-commented and renamed ports to align with the Calculator project design.
+##
+## Usage:
+## - Modify the lines as needed to fit the project requirements.
+## - Rename the ports after `get_ports` to match the top-level entity in the project.
+## ------------------------------------------------------------------------------
 
 # Clock signal
 set_property PACKAGE_PIN W5 [get_ports clk]
@@ -42,7 +58,6 @@ set_property PACKAGE_PIN W5 [get_ports clk]
 #set_property PACKAGE_PIN R2 [get_ports {sw[15]}]
 	#set_property IOSTANDARD LVCMOS33 [get_ports {sw[15]}]
 
-## 
 ## LEDs
 set_property PACKAGE_PIN U16 [get_ports {led[0]}]
 	set_property IOSTANDARD LVCMOS33 [get_ports {led[0]}]

@@ -1,23 +1,26 @@
 ----------------------------------------------------------------------------------
 -- Company: Digilent Inc 2011
--- Engineer: Michelle Yu  
+-- Authors: Michelle Yu (Original), Isaac Latta (Modified), Michael Baudin (Modified)
 -- Create Date: 13:28:41 08/18/2011 
 --
--- Module Name:    DisplayController - Behavioral 
--- Project Name: 	 PmodKYPD
--- Target Devices: Nexys 3 
+-- Module Name:   DisplayController - Behavioral 
+-- Project Name:  Calculator
+-- Target Devices: Basys3
 -- Tool versions: Xilinx ISE Design Suite 13.2
 --
 -- Description: 
--- This file defines a DisplayController that controls the seven segment display that works with 
--- the output of the Decoder
+-- This module controls a 4-digit seven-segment display to show a 16-bit binary 
+-- value as a decimal number. The input value (DispVal) is split into individual
+-- digits, which are multiplexed across the display. Modifications were made to 
+-- the original Digilent code to support multi-digit display functionality.
+--
 -- Revision: 
 -- Revision 0.01 - File Created
+-- Revision 0.02 - Modified for multi-digit support (Latta, Baudin)
 ----------------------------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
---use IEEE.STD_LOGIC_ARITH.ALL;
---use IEEE.STD_LOGIC_UNSIGNED.ALL;
 use IEEE.NUMERIC_STD.ALL;
 
 entity DisplayController is
@@ -30,10 +33,10 @@ entity DisplayController is
 end DisplayController;
 
 architecture Behavioral of DisplayController is
-    signal refresh_counter : unsigned(19 downto 0) := (others => '0'); -- Adjust bit width as needed
-    signal digit_select : STD_LOGIC_VECTOR(1 downto 0);
-    signal current_digit : STD_LOGIC_VECTOR(3 downto 0);
-    signal digit1, digit2, digit3, digit4 : STD_LOGIC_VECTOR(3 downto 0);
+    signal refresh_counter : unsigned(19 downto 0) := (others => '0'); 
+    signal digit_select : STD_LOGIC_VECTOR(1 downto 0); -- Select bit to mux to the seven segment display bit
+    signal current_digit : STD_LOGIC_VECTOR(3 downto 0); -- Current digit being to be written to the 7seg
+    signal digit1, digit2, digit3, digit4 : STD_LOGIC_VECTOR(3 downto 0); -- Stores for digits to be written.
 begin
     -- Split DispVal into individual digits
     process(DispVal)
@@ -41,8 +44,6 @@ begin
         variable to_be_casted : unsigned(15 downto 0);
     begin
         temp_val := unsigned(DispVal);
-        
-        
         
         -- Casting here to convert between unsigned and integer for mod operation
         digit1 <= std_logic_vector(to_unsigned(to_integer(temp_val) mod 10, 4)); -- Rightmost digit
@@ -62,7 +63,8 @@ begin
         end if;
     end process;
     
-    -- Use higher bits of the counter for digit selection
+    -- Use the higher bits of the counter for digit selection, toggle through the MSB's 00, 01, 10, 11. 
+    -- Allocates approximatelty 1/4 of refresh_counter's period to each digit.
     digit_select <= std_logic_vector(refresh_counter(19 downto 18));
     
     -- Multiplexing logic

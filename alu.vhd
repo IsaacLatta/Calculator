@@ -1,3 +1,12 @@
+----------------------------------------------------------------------------------
+-- Authors: Isaac Latta, Michael Baudin  
+--
+-- Module Name:   alu - Behavioral 
+-- Project Name:  Calculator
+-- Target Devices: Basys3
+-- Description: The alu (Arithmatic Logic Unit) is the component responsible for computer the multiplication, division, adding and subtracting operations.
+----------------------------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
@@ -5,8 +14,8 @@ use IEEE.NUMERIC_STD.ALL;
 entity alu is
     Port (
         clk: in STD_LOGIC;
-        done: out STD_LOGIC;
-        ready: in STD_LOGIC;
+        done: out STD_LOGIC; -- Signals completion of computation
+        ready: in STD_LOGIC; -- Commence computation
         a : in  STD_LOGIC_VECTOR (15 downto 0);  -- Operand a (16 bits)
         b : in  STD_LOGIC_VECTOR (15 downto 0);  -- Operand b (16 bits)
         opcode : in STD_LOGIC_VECTOR (3 downto 0);  -- Operation selector

@@ -13,9 +13,14 @@
 -- at 1KHz. After a column is asserted low, each row pin is checked. 
 -- When a row pin is detected to be low, the key that was pressed could be determined.
 --
+-- Note: 
+-- This file is sourced directly from the Digilent PmodKYPD reference design documentation.
+-- It remains unmodified to ensure the original functionality is preserved sources [1] and [2] from our report.
+--
 -- Revision: 
 -- Revision 0.01 - File Created
 ----------------------------------------------------------------------------------
+
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
