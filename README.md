@@ -54,7 +54,7 @@ Transitions are triggered by keypad inputs (debounced values). For instance, the
 ## Constraints
 - Ensure the Pmod KYPD module is connected to the JA port.
 - Correctly map pins in the `basys3.xdc` file for the 7-segment display and keypad connections.
-- Repeating digits is not supported for operands.
+- Repeated digits are not supported for operands.
 - Signed operands and results are not supported.
 
 ## Notes
